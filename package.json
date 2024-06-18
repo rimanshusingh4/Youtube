@@ -1,0 +1,16 @@
+{
+  "name": "youtube",
+  "version": "1.0.0",
+  "description": "A Project of Youtube Clone but not Exactly like that.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Backend",
+    "Youtube",
+    "Nodejs"
+  ],
+  "author": "Rimanshu Singh",
+  "license": "ISC"
+}
