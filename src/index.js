@@ -4,11 +4,24 @@ dotenv.config({
     path: './env'
 }) //esko config karne ke baad hme package.json me jake dev script me -r wali line add karni padegi kyuki ye ek experimental feature hai.
 import connectDB from "./db/index.js";
+import {app} from './app.js'
 
 
 // Second Approch just below one line.
-connectDB(); // hm direct esko import karke project ko run nhi kar sakte  ye ek common issue hai eske liye hum error ko sahi se padho kyuki db ke baad index aur extension lagana padta hai.
+connectDB() // hm direct esko import karke project ko run nhi kar sakte  ye ek common issue hai eske liye hum error ko sahi se padho kyuki db ke baad index aur extension lagana padta hai.
+// connectDB() ek async code hai aur ye hamesha ek promise return karta hai es liye hum .ten and .catch use kar rhe hai yaha pe.
 
+.then(()=>{
+    app.listen(process.env.PORT || 8005);
+    console.log(`🛞  Server is running on PORT: ${process.env.PORT}`);
+    app.on("Error",(error)=>{
+        console.log("Error after Port listen:", error)
+        throw error;
+    })
+})
+.catch((err)=>{
+    console.log("💥 MongoDB Connection Failed at src/index !!!", err);
+});
 
 
 
