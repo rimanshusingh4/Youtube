@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from "mongoose"; //jb v database se kuch kaam hoga tb hum mongoose use krte hai.
 import { DB_Name } from "../constants.js";
 
 const connectDB = async ()=>{
