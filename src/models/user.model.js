@@ -54,7 +54,7 @@ const userSchema = new Schema(
 userSchema.pre("save",async function (next) { // yaha callback me hum general fn ka use kiya hai, kyuki arrow fn ke pass this. ka acess ni hota hai.
     if(!this.isModified("password")) return next(); // modified ka acess hme by default milta hai.
     
-    this.password = bcrypt.hash(this.password, 10)
+    this.password = await bcrypt.hash(this.password, 10)
     next() // es code se hm jitni bar userSchema ko use karege eg- avatar chabge ya fir username update k liya utni bar ye password o khud se --
             //-- hash kar dega aur ye ek bug/issue ho jayega es liye hum esko tabhi run karege jab passowrd add ya update hoga. is liye if condition ka use karege.
     
