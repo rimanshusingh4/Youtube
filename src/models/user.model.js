@@ -83,6 +83,7 @@ userSchema.methods.generateAccessToken = function (){
 }
 
 userSchema.methods.generateRefreshToken = function (){
+    // refresh token database me rahega, kyuki bar bar password na lena pade user se es liye hum direct Refresh token match kara lenge.
     return jwt.sign(
         {
             _id: this._id,
