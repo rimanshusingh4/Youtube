@@ -101,18 +101,22 @@ const loginUser = asyncHandler(async (req,res)=>{
     // send cookies
 
     const {email, username, password} = req.body
-    if(!email || !username){
+
+    if(!(username || email)){
         throw new apiError(400, "Username or Email is required");
     }
-    const user = User.findOne({
+    const user = await User.findOne({
         $or: [{username}, {email}]
-    }) 
-    if(!user){
-        throw new apiError(404, "User not Exist");
+    })
+
+    if (!user) {
+        throw new apiError(404, "User does not exist")
     }
-    const isPasswordValid = await user.isPasswordCorrect(password)
-    if(!isPasswordValid){
-        throw new apiError(401, "Wrong Password");
+
+   const isPasswordValid = await user.isPasswordCorrect(password)
+
+   if (!isPasswordValid) {
+    throw new apiError(401, "Invalid user credentials")
     }
 
     const {accessToken, refreshToken} = await generateAccessAndRefreshToken(user._id) // ab yaha pe destructure krkr hm accessToken and RefreshToken dono le lenge.
@@ -161,12 +165,15 @@ const logoutUser = asyncHandler(async(req,res)=>{
     }
     return res
     .status(200)
-    .clearCookie("AccessToken", accessToken, options)
-    .clearCookie("RefreshToken", refreshToken, options)
+    .clearCookie("AccessToken", options)
+    .clearCookie("RefreshToken", options)
     .json(new apiResponce(200, {}, "User Logout"))
 })
+
+
 export {
     registerUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    generateAccessAndRefreshToken
 };

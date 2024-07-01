@@ -62,9 +62,10 @@ userSchema.pre("save",async function (next) { // yaha callback me hum general fn
 
 // jaisa deleteOne, deleteMany aur v method hote hai Database me waisa hi hum apna custom metrhod v bana sakte hai. EG- 
 
-userSchema.methods.isPasswordCorrect = async function (passowrd) {
-    return await bcrypt.compare(password, this.passowrd)
+userSchema.methods.isPasswordCorrect = async function(password){
+    return await bcrypt.compare(password, this.password)
 }
+
 
 userSchema.methods.generateAccessToken = function (){
     return jwt.sign(
