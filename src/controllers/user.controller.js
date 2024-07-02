@@ -4,6 +4,7 @@ import {User} from '../models/user.model.js'
 import {uploadCloudinary} from '../utils/cloudinary.js'
 import { apiResponce } from '../utils/apiResponce.js';
 import { jwt } from 'jsonwebtoken';
+import mongoose from 'mongoose';
 
 const generateAccessAndRefreshToken = async(userId) => {
     try {
@@ -246,9 +247,12 @@ const getCurrentUser = asyncHandler(async(req, res)=>{
     return res
     .status(200)
     .json(
-        200,
-        req.user,
-        "Fetched Current user Successfully"
+        new apiResponce(
+            200,
+            req.user,
+            "Fetched Current user Successfully"
+        )
+        
     )
 
 })
@@ -259,7 +263,7 @@ const updateAccountDetails = asyncHandler(async(req, res)=>{
     if(!email || !fullName){
         throw new apiError(401,"fields are Required")
     }
-    const user = User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set:{
@@ -301,6 +305,9 @@ const updateUserAvatar = asyncHandler(async(req, res)=>{
         },
         {new: true}
     ).select("-password")
+
+    // TODO-> Delete old avatar image from cloudinary
+
     return res.status(200)
     .json(
         new apiResponce(
@@ -342,6 +349,132 @@ const updateUserCoverImager = asyncHandler(async(req, res)=>{
 
 })
 
+const getUserChannelProfile = asyncHandler(async(req, res)=>{
+    const {username} = req.params;
+    if(!username){
+        throw new apiError(400, "Username is missing");
+    }
+
+    const channel = await User.aggregate([ // sb kuch aggregate pipeline ke through krege.
+        {
+            $match:{ // subse phle hmne user ko match kara.
+                username: username?.toLowerCase()
+            }
+        },
+        {
+            $lookup:{ // match hone k baad, subscriber count nikal liya, channel ke through.
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        {
+            $lookup:{ // fir same hmne kitne channel subscribe kiye hai wo nikal liya, subscription k through.
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo"
+            }
+        },
+        {
+            $addFields:{ // ab subscriber aur subscriberTo nikalne ke baad, usko count v to karna hai
+                subscribersCount:{
+                    $size: "$subscribers"
+                },
+                channelsSubsToCount:{
+                    $size: "$subscribedTo"
+                },
+                isSubscribed:{ // count krne ke baad hme ye v to dikhana hai ki aap subscribe kiya hai ya nahi.
+                    $cond:{
+                        if:{$in:[req.user?._id, "$subscribers.subscriber"]}, //$in dono ko le leta hai Array and Object
+                        then: true,
+                        else: false,
+                    }
+                }
+            }
+        },
+        {
+            $project:{
+                fullName: 1,
+                username: 1,
+                email: 1,
+                subscribersCount: 1,
+                channelsSubsToCount: 1,
+                isSubscribed: 1,
+                avatar: 1,
+                coverImage: 1
+            }
+        }
+    ])
+    if(!channel?.length){
+        throw new apiError(400, "Channel does not exist")
+    }
+    console.log("Channel Console",channel)
+
+    return res.status(200)
+    .json(
+        new apiResponce(
+            200,
+            channel[0],
+            "User Channel fetched successfully"
+        )
+    )
+})
+
+const getWatchHistory = asyncHandler(async(req,res)=>{ // aggrigation use krte time hm mongodb ka id direct _id karke use ni kr sakte kyuki esme wo string form me nhi aata hai.
+    const user = await User.aggregate([
+        {
+            $match:{
+                _id: mongoose.Types.ObjectId._id //yaha pe hm req.body._id use kar sakte the lekin ye aggregate use ho rha hai es liya esko mongoose ke objectId ke through use krna padga
+            }
+        },
+        {
+            $lookup:{ // es lokup se hme videos ka sara document mi gaya, but owner ek khud me document hai es liye hm nested use karege.
+                from: " Video",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline:[
+                    {
+                        $lookup: { // es wale lookup se hm owner document me ghus gye.
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline:[ // owner field me bhi bahut data hoga hme sb toh chahiye nhi es liye hum Project ka use karke data apne accprding le lenge
+                                {
+                                    $project:{ // eska use karne hm wahi data select krte hai jiski hme jarurat hoti hai.
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1,
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields:{
+                            owner: {
+                                $first: "$owner",
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+    return res.status(200)
+    .json(
+        new apiResponce(
+            200,
+            user[0].watchHistory,
+            "Watch History Fetch successfully"
+        )
+    )
+})
+
+
 export {
     registerUser,
     loginUser,
@@ -351,6 +484,8 @@ export {
     getCurrentUser,
     updateAccountDetails,
     updateUserAvatar,
-    updateUserCoverImager
-    
+    updateUserCoverImager,
+    getUserChannelProfile,
+    getWatchHistory,
+
 };
