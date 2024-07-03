@@ -3,7 +3,7 @@ import {apiError} from '../utils/apiError.js'
 import {User} from '../models/user.model.js'
 import {uploadCloudinary} from '../utils/cloudinary.js'
 import { apiResponce } from '../utils/apiResponce.js';
-import { jwt } from 'jsonwebtoken';
+import  jwt  from 'jsonwebtoken';
 import mongoose from 'mongoose';
 
 const generateAccessAndRefreshToken = async(userId) => {
@@ -149,11 +149,11 @@ const loginUser = asyncHandler(async (req,res)=>{
 })
 
 const logoutUser = asyncHandler(async(req,res)=>{
-    User.findByIdAndUpdate(
+    await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set:{
-                refreshToken: undefined,
+            $unset:{
+                refreshToken: 1, // clear all the token from browser
             }
         },
         {
@@ -167,14 +167,14 @@ const logoutUser = asyncHandler(async(req,res)=>{
     }
     return res
     .status(200)
-    .clearCookie("AccessToken", options)
-    .clearCookie("RefreshToken", options)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
     .json(new apiResponce(200, {}, "User Logout"))
 })
 
 const refreshAccessToken = asyncHandler(async(req, res)=>{
     // User se Token le rhe hai
-    const incomingRefreshToken =  req.cookie.refreshToken || req.body.refreshToken;
+    const incomingRefreshToken =  req.cookies.refreshToken || req.body.refreshToken;
     // agar token ni toh eska mtlb access wrong hai
     if(!incomingRefreshToken){
         throw new apiError(401, "Unauthorized Request");
@@ -206,7 +206,7 @@ const refreshAccessToken = asyncHandler(async(req, res)=>{
         .cookie("accessToken", accessToken, options)
         .cookie("refreshToken", newRefreshToken, options)
         .json(
-            apiResponce(
+            new apiResponce(
                 200,
                 {accessToken, refreshToken : newRefreshToken},
                 "Token Refreshed Successfully"
@@ -426,7 +426,7 @@ const getWatchHistory = asyncHandler(async(req,res)=>{ // aggrigation use krte t
     const user = await User.aggregate([
         {
             $match:{
-                _id: mongoose.Types.ObjectId._id //yaha pe hm req.body._id use kar sakte the lekin ye aggregate use ho rha hai es liya esko mongoose ke objectId ke through use krna padga
+                _id: new mongoose.Types.ObjectId(req.user._id) //yaha pe hm req.body._id use kar sakte the lekin ye aggregate use ho rha hai es liya esko mongoose ke objectId ke through use krna padga
             }
         },
         {
@@ -448,6 +448,7 @@ const getWatchHistory = asyncHandler(async(req,res)=>{ // aggrigation use krte t
                                         fullName: 1,
                                         username: 1,
                                         avatar: 1,
+                                        // watchHistory: 1
                                     }
                                 }
                             ]
